@@ -1,4 +1,4 @@
-﻿#include "AudioDeviceSettings.h"
+#include "AudioDeviceSettings.h"
 #include "LanguageManager.hpp"
 
 //==============================================================================
@@ -148,6 +148,7 @@ DeviceSelectorDialog::DeviceSelectorDialog(AudioDeviceManager &dm, int maxIn, in
     : mgr(dm), initialMaxIn(maxIn), initialMaxOut(maxOut)
 {
     updateSelectorComponent();
+    mSelectedDeviceName = getCurrentDeviceName();
     startTimer(150);
 }
 
@@ -155,6 +156,7 @@ DeviceSelectorDialog::DeviceSelectorDialog(AudioDeviceManager &dm, int maxIn, in
 DeviceSelectorDialog::~DeviceSelectorDialog()
 {
     stopTimer();
+    mgr.removeChangeListener(this);
     if (sel)
         sel->setLookAndFeel(nullptr);
 }
@@ -167,6 +169,11 @@ void DeviceSelectorDialog::timerCallback()
         return;
     // 縮放改變：重建 selector（後續 async block 會量測高度並呼叫 onScaleChanged）
     updateSelectorComponent();
+}
+
+void DeviceSelectorDialog::changeListenerCallback(ChangeBroadcaster* source)
+{
+   mSelectedDeviceName = getCurrentDeviceName();
 }
 
 void DeviceSelectorDialog::updateSelectorComponent()
@@ -208,6 +215,7 @@ void DeviceSelectorDialog::updateSelectorComponent()
     sel = std::make_unique<AudioDeviceSelectorComponent>(
         mgr, 0, initialMaxIn, 0, initialMaxOut,
         false, false, false, false);
+    mgr.addChangeListener(this);
 
     auto& selectorLookAndFeel = getScaledSelectorLookAndFeel();
     selectorLookAndFeel.setScaleFactor(getFontScaleFactor());
@@ -219,40 +227,39 @@ void DeviceSelectorDialog::updateSelectorComponent()
     // 使用 callAsync 是因為：
     // 1. 需要等元件真正加入並完成 layout
     // 2. 某些字體與 itemHeight 要在 UI thread 完整建立後才準確
-    MessageManager::callAsync([this]
-                              {
+    MessageManager::callAsync([this]{
         // 若在這期間 sel 被刪除，直接安全退出
         if (!sel) return;
-
+        
         // 取得原始 item 高度（未經縮放）
         naturalItemHeight = sel->getItemHeight();
-
+        
         // 收集所有子元件的原始字體大小
         // 這樣之後才能按比例縮放
         collectNaturalFonts(sel.get());
-
+        
         // 標記基準資料已準備完成
         baselinesReady = true;
-
+        
         // 計算總縮放比例（通常包含 DPI + 語系縮放）
         float totalScale = getFontScaleFactor();
         lastScale = totalScale;
-
+        
         getScaledSelectorLookAndFeel().setScaleFactor(totalScale);
-
+        
         // 依照縮放比例調整 item 高度
         // jmax(1, ...) 確保高度至少為 1，避免意外變 0
         sel->setItemHeight(
-            jmax(1, static_cast<int>(naturalItemHeight * totalScale))
-        );
-
+                           jmax(1, static_cast<int>(naturalItemHeight * totalScale))
+                           );
+        
         // 對所有子元件套用整體縮放（字體、間距等）
         applyTotalScale(sel.get(), totalScale);
-
+        
         // 給 sel 一個足夠大的臨時大小，讓 JUCE 內部完成 layout
         sel->setSize(static_cast<int>(420 * totalScale), 2000);
         sel->resized();
-
+        
         // 量測所有可見子元件的最低封底邊緣，作為實際內容高度
         int maxBottom = 0;
         for (int i = 0; i < sel->getNumChildComponents(); ++i)
@@ -262,14 +269,15 @@ void DeviceSelectorDialog::updateSelectorComponent()
                 maxBottom = jmax(maxBottom, c->getBottom());
         }
         computedContentHeight = (maxBottom > 30) ? maxBottom : static_cast<int>(300 * totalScale);
-
+        
         // 通知父視窗依實際高度重新計算大小
         if (onScaleChanged)
             onScaleChanged();
-
+        
         // 重新 layout（此時大小由 Window 設定，會再觸發 resized())
         if (getHeight() > 0)
-            resized(); });
+            resized();
+    });
 }
 
 /// 調整子組件大小和位置
@@ -323,8 +331,9 @@ void DeviceSelectorDialog::applyTotalScale(Component *comp, float totalScale)
 String DeviceSelectorDialog::getCurrentDeviceName() const
 {
     String name = LanguageManager::getInstance().getText("audioDevice");
-    if (auto *d = mgr.getCurrentAudioDevice())
+    if (auto *d = mgr.getCurrentAudioDevice()) {
         name = d->getName();
+    }
     return name;
 }
 
@@ -384,8 +393,6 @@ void DeviceSelectorWindow::closeWindow()
     }
 
     removeFromDesktop();
-    if (onWindowClosed)
-        onWindowClosed();
     delete this; // 自我銷毀（由 addToDesktop 管理的視窗）
 }
 

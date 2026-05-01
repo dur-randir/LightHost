@@ -112,12 +112,8 @@ IconMenu::IconMenu() : INDEX_EDIT(1000000), INDEX_BYPASS(2000000), INDEX_DELETE(
     std::unique_ptr<XmlElement> savedPluginList(getAppProperties().getUserSettings()->getXmlValue("pluginList"));
     if (savedPluginList != nullptr)
         knownPluginList.recreateFromXml(*savedPluginList);
-    pluginSortMethod = KnownPluginList::sortByManufacturer;
     knownPluginList.addChangeListener(this);
-    // Plugins - active
-    std::unique_ptr<XmlElement> savedPluginListActive(getAppProperties().getUserSettings()->getXmlValue("pluginListActive"));
-    if (savedPluginListActive != nullptr)
-        activePluginList.recreateFromXml(*savedPluginListActive);
+
     // Setup the main content and bind the graph change callback for saving
     mainContent = std::make_unique<MainWindowContent>(
         deviceManager,
@@ -153,7 +149,6 @@ IconMenu::IconMenu() : INDEX_EDIT(1000000), INDEX_BYPASS(2000000), INDEX_DELETE(
     // Load saved graph state after setting up fixed I/O nodes
     // The loadActivePlugins() call now just setups the I/O nodes in AudioProcessorGraph
     loadActivePlugins();
-    activePluginList.addChangeListener(this);
 
     std::unique_ptr<XmlElement> savedGraphState(getAppProperties().getUserSettings()->getXmlValue("nodeGraphState"));
     if (savedGraphState != nullptr)
@@ -213,26 +208,6 @@ void IconMenu::loadActivePlugins()
     // to route audio: Input → Plugin → Output.
 }
 
-PluginDescription IconMenu::getNextPluginOlderThanTime(int &time)
-{
-	int timeStatic = time;
-	PluginDescription closest;
-	int diff = INT_MAX;
-	for (const auto& plugin : activePluginList.getTypes())
-	{
-		String key = getKey("order", plugin);
-		String pluginTimeString = getAppProperties().getUserSettings()->getValue(key);
-		int pluginTime = atoi(pluginTimeString.toStdString().c_str());
-		if (pluginTime > timeStatic && abs(timeStatic - pluginTime) < diff)
-		{
-			diff = abs(timeStatic - pluginTime);
-			closest = plugin;
-			time = pluginTime;
-		}
-	}
-	return closest;
-}
-
 void IconMenu::changeListenerCallback(ChangeBroadcaster* changed)
 {
     if (changed == &knownPluginList)
@@ -241,15 +216,6 @@ void IconMenu::changeListenerCallback(ChangeBroadcaster* changed)
         if (savedPluginList != nullptr)
         {
             getAppProperties().getUserSettings()->setValue ("pluginList", savedPluginList.get());
-            getAppProperties().saveIfNeeded();
-        }
-    }
-    else if (changed == &activePluginList)
-    {
-        std::unique_ptr<XmlElement> savedPluginList (activePluginList.createXml());
-        if (savedPluginList != nullptr)
-        {
-            getAppProperties().getUserSettings()->setValue ("pluginListActive", savedPluginList.get());
             getAppProperties().saveIfNeeded();
         }
     }
@@ -309,31 +275,10 @@ void IconMenu::menuInvocationCallback(int id, IconMenu* im)
     }
 }
 
-std::vector<PluginDescription> IconMenu::getTimeSortedList()
-{
-	int time = 0;
-	std::vector<PluginDescription> list;
-	for (int i = 0; i < activePluginList.getNumTypes(); i++)
-		list.push_back(getNextPluginOlderThanTime(time));
-	return list;
-		
-}
-
 String IconMenu::getKey(String type, PluginDescription plugin)
 {
 	String key = "plugin-" + type.toLowerCase() + "-" + plugin.name + plugin.version + plugin.pluginFormatName;
 	return key;
-}
-
-void IconMenu::deletePluginStates()
-{
-	std::vector<PluginDescription> list = getTimeSortedList();
-    for (int i = 0; i < activePluginList.getNumTypes(); i++)
-    {
-		String pluginUid = getKey("state", list[i]);
-        getAppProperties().getUserSettings()->removeValue(pluginUid);
-        getAppProperties().saveIfNeeded();
-    }
 }
 
 void IconMenu::savePluginStates()
@@ -351,24 +296,6 @@ void IconMenu::savePluginStates()
         bool isInputOrOutput = (dynamic_cast<AudioProcessorGraph::AudioGraphIOProcessor*>(proc) != nullptr);
         if (isInputOrOutput)
             continue;  // Skip input/output nodes
-            
-        // Try to find this processor in our known plugin list to get description
-        for (const auto& desc : activePluginList.getTypes())
-        {
-            if (auto* pi = dynamic_cast<AudioPluginInstance*>(proc))
-            {
-                PluginDescription procDesc;
-                pi->fillInPluginDescription(procDesc);
-                if (procDesc.name == desc.name && procDesc.pluginFormatName == desc.pluginFormatName)
-                {
-                    String pluginUid = getKey("state", desc);
-                    MemoryBlock savedStateBinary;
-                    proc->getStateInformation(savedStateBinary);
-                    getAppProperties().getUserSettings()->setValue(pluginUid, savedStateBinary.toBase64Encoding());
-                    break;
-                }
-            }
-        }
     }
     
     getAppProperties().saveIfNeeded();
@@ -383,10 +310,11 @@ void IconMenu::reloadPlugins()
 
 void IconMenu::removePluginsLackingInputOutput()
 {
-	// TODO needs sanity check
+    return;
+    
     for (const auto& plugin : knownPluginList.getTypes())
     {
-        if (plugin.numInputChannels < 2 || plugin.numOutputChannels < 2)
+        if (plugin.numInputChannels == 0 || plugin.numOutputChannels == 0)
 		    knownPluginList.removeType(plugin);
     }
 }

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "JuceHeader.h"
 
@@ -44,11 +44,12 @@ private:
 //   • 作為 DeviceSelectorWindow 的內容組件運作
 //   • 視窗關閉按鈕由父視窗管理
 //==============================================================================
-class DeviceSelectorDialog : public Component, private Timer
+class DeviceSelectorDialog : public Component, private Timer, public ChangeListener
 {
 public:
     /// 當縮放因子改變時，通知父視窗重新計算大小
     std::function<void()> onScaleChanged;
+    String mSelectedDeviceName;
 
     /// 建構函式
     /// @param dm     音訊裝置管理器
@@ -61,7 +62,8 @@ public:
 
     /// 計時器回調：偵測縮放變化
     void timerCallback() override;
-
+    void changeListenerCallback(ChangeBroadcaster* source) override;
+    
     /// 重新建立 AudioDeviceSelectorComponent 實例並應用縮放
     void updateSelectorComponent();
 
@@ -121,9 +123,6 @@ private:
 class DeviceSelectorWindow : public DocumentWindow, private Timer
 {
 public:
-    /// 視窗被關閉時調用的回調函式
-    std::function<void()> onWindowClosed;
-
     /// 建構函式，建立並初始化選擇器視窗
     /// @param title      視窗標題（例如 "音訊輸入" 或 "音訊輸出"）
     /// @param dm         音訊裝置管理器

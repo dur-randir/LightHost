@@ -38,12 +38,17 @@ add_subdirectory(JUCE)
 
 # Check the readme at `docs/CMake API.md` in the JUCE repo for full config
 # https://github.com/juce-framework/JUCE/blob/69795dc8e5/docs/CMake%20API.md
+
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Info-App-Additions.plist" plist_content_to_merge)
+
 juce_add_gui_app("${PROJECT_NAME}"
     COMPANY_NAME LightHost
     FORMATS Standalone # Valid formats: AAX Unity VST AU AUv3 Standalone
     ICON_BIG Resources/icon.png
     ICON_SMALL Resources/menu_icon.png
-    PRODUCT_NAME "${PROJECT_NAME}")
+    PRODUCT_NAME "${PROJECT_NAME}"
+    MICROPHONE_PERMISSION_ENABLED True
+    PLIST_TO_MERGE "${plist_content_to_merge}")
 
 # `juce_generate_juce_header` will create a JuceHeader.h for a given target, which will be generated
 # into your build tree. This should be included with `#include <JuceHeader.h>`. The include path for
