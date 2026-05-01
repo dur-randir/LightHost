@@ -1,6 +1,5 @@
 ﻿#include "AudioDeviceSettings.h"
 #include "LanguageManager.hpp"
-#include <Windows.h>
 
 //==============================================================================
 // ScaleSettingsManager 實現
@@ -67,11 +66,11 @@ inline float getFontScaleFactor() { return getDPIScaleFactor() * LanguageManager
 /// 取得系統窗框高度（包括標題欄下方的邊框）
 inline int getSystemFrameHeight()
 {
-    // SM_CYFRAME: 調整不可調整大小的窗口的邊框的厚度（垂直）
-    int frameHeight = GetSystemMetrics(SM_CYFRAME);
-    // SM_CYSIZE: 視窗按鈕（最小化、最大化、關閉）的高度
-    int buttonHeight = GetSystemMetrics(SM_CYSIZE);
-    return frameHeight + buttonHeight;
+    //int frameHeight = GetSystemMetrics(SM_CYFRAME);
+    //int buttonHeight = GetSystemMetrics(SM_CYSIZE);
+    //return frameHeight + buttonHeight;
+
+    return 12;
 }
 
 class ScaledSelectorLookAndFeel : public LookAndFeel_V3

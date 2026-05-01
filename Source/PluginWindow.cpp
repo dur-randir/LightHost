@@ -57,26 +57,24 @@ class ProcessorProgramPropertyComp : public PropertyComponent,
                                      private AudioProcessorListener
 {
 public:
-    ProcessorProgramPropertyComp (const String& name, AudioProcessor& p, int index_)
+    ProcessorProgramPropertyComp (const String& name, AudioProcessor& p)
         : PropertyComponent (name),
-          owner (p),
-          index (index_)
+          owner (p)
     {
         owner.addListener (this);
     }
 
-    ~ProcessorProgramPropertyComp()
+    ~ProcessorProgramPropertyComp() override
     {
         owner.removeListener (this);
     }
 
-    void refresh() { }
+    void refresh() override { }
     virtual void audioProcessorChanged (AudioProcessor*, const ChangeDetails&) override { }
     virtual void audioProcessorParameterChanged(AudioProcessor*, int, float) override { }
 
 private:
     AudioProcessor& owner;
-    const int index;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProcessorProgramPropertyComp)
 };
@@ -103,7 +101,7 @@ public:
             if (name.isEmpty())
                 name = "Unnamed";
 
-            ProcessorProgramPropertyComp* const pc = new ProcessorProgramPropertyComp (name, p, i);
+            ProcessorProgramPropertyComp* const pc = new ProcessorProgramPropertyComp (name, p);
             programs.add (pc);
             totalHeight += pc->getPreferredHeight();
         }

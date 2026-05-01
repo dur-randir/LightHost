@@ -16,7 +16,7 @@ public:
     };
 
     PluginWindow (Component* pluginEditor, AudioProcessorGraph::Node*, WindowFormatType);
-    ~PluginWindow();
+    ~PluginWindow() override;
 
     static PluginWindow* getWindowFor (AudioProcessorGraph::Node*, WindowFormatType);
 
@@ -44,6 +44,7 @@ inline String toString (PluginWindow::WindowFormatType type)
         case PluginWindow::Generic:    return "Generic";
         case PluginWindow::Programs:   return "Programs";
         case PluginWindow::Parameters: return "Parameters";
+        case PluginWindow::NumTypes:   return "NumTypes";
         default:                       return String();
     }
 }

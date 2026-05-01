@@ -5,6 +5,8 @@
     "languageName": "English",
     "fontScaling": 1.0
   },
+  "appName": "Light Host",
+  "showMain": "Active Plugins",
   "preferences": "Preferences",
   "editPlugins": "Edit Plugins",
   "activePlugins": "Active Plugins",

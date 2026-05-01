@@ -175,9 +175,6 @@ public:
 
 private:
     AudioDeviceManager&       deviceManager;
-    KnownPluginList&          knownPlugins;
-    AudioPluginFormatManager& formatManager;
-    AudioProcessorGraph&      graph;
 
     std::unique_ptr<NodeGraphCanvas> graphCanvas;
     std::unique_ptr<TextButton> settingsBtn;

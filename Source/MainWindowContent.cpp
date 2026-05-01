@@ -892,7 +892,7 @@ void NodeGraphCanvas::showPluginPicker(Point<int> canvasPos)
 
     const auto sc = localPointToGlobal(canvasPos);
     m.showMenuAsync(PopupMenu::Options().withTargetScreenArea({sc.x, sc.y, 1, 1}),
-        [this, types, canvasPos, kManage](int result)
+        [this, types](int result)
         {
             if (result == kManage && onManagePlugins) { onManagePlugins(); return; }
             if (result <= 0 || result > types.size()) return;
@@ -1028,7 +1028,7 @@ MainWindowContent::MainWindowContent(AudioDeviceManager&      dm,
                                      KnownPluginList&          kpl,
                                      AudioPluginFormatManager& fmt,
                                      AudioProcessorGraph&      g)
-    : deviceManager(dm), knownPlugins(kpl), formatManager(fmt), graph(g)
+    : deviceManager(dm)
 {
     // Load scale settings from ApplicationProperties
     ScaleSettingsManager::getInstance().loadSettings();

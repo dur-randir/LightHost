@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.15)
 
 # This is the name of your plugin
 # This cannot have spaces (but PRODUCT_NAME can)
-set(PROJECT_NAME "VoicemeeterHost")
+set(PROJECT_NAME "LightHost")
 
 # Read project version from env variable, allowing it to be provided by CI/CD workflow
 set(PROJECT_VERSION $ENV{PROJECT_VERSION})
@@ -39,7 +39,7 @@ add_subdirectory(JUCE)
 # Check the readme at `docs/CMake API.md` in the JUCE repo for full config
 # https://github.com/juce-framework/JUCE/blob/69795dc8e5/docs/CMake%20API.md
 juce_add_gui_app("${PROJECT_NAME}"
-    COMPANY_NAME VoicemeeterHost
+    COMPANY_NAME LightHost
     FORMATS Standalone # Valid formats: AAX Unity VST AU AUv3 Standalone
     ICON_BIG Resources/icon.png
     ICON_SMALL Resources/menu_icon.png
@@ -67,10 +67,7 @@ set(SourceFiles
     Source/MainWindowContent.h
     Source/MainWindowContent.cpp
     Source/PluginWindow.cpp
-    Source/PluginWindow.h
-    Source/VoicemeeterRemote.h
-    Source/VoicemeeterAudioDevice.h
-    Source/VoicemeeterAudioDevice.cpp)
+    Source/PluginWindow.h)
 target_sources("${PROJECT_NAME}" PRIVATE ${SourceFiles})
 
 # No, we don't want our source buried in extra nested folders

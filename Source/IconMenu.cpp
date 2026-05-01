@@ -13,31 +13,8 @@
 #include "MainWindowContent.h"
 #include <ctime>
 #include <limits.h>
-#include "Windows.h"
-#include "VoicemeeterAudioDevice.h"  // Windows 專用：Voicemeeter 音頻設備支援
 
 // ==================== Windows 平台特定實現 ====================
-
-/**
- * LightHostAudioDeviceManager::createAudioDeviceTypes() 實現
- * 
- * 建立並註冊所有可用的音頻設備類型
- * 包括標準系統音頻設備和 Voicemeeter 虛擬設備
- * 
- * 步驟：
- * 1. 調用基類方法註冊標準設備
- * 2. 添加 Voicemeeter 自訂設備類型
- */
-void LightHostAudioDeviceManager::createAudioDeviceTypes (OwnedArray<AudioIODeviceType>& types)
-{
-    // 只添加 Voicemeeter 設備，移除所有標準系統音頻設備
-    types.add (new VoicemeeterAudioIODeviceType());
-}
-
-namespace
-{
-constexpr int languageMenuItemBase = 2000000000;  // 語言菜單項 ID 基數
-}
 
 class IconMenu::PluginListWindow : public DocumentWindow
 {
@@ -104,6 +81,7 @@ public:
         setResizeLimits(600, 400, 4096, 4096);
         centreWithSize(900, 560);
         setVisible(true);
+        setTopLeftPosition(250, 150); // 預設視窗左上角座標
     }
 
     void closeButtonPressed() override
@@ -286,23 +264,7 @@ void IconMenu::timerCallback()
     
     // Edit Plugins - simple menu item
     menu.addItem(2, LanguageManager::getInstance().getText("editPlugins"));
-
-    // Language selection - Dynamically generated from available languages
-    PopupMenu languageMenu;
-    int languageMenuItemId = languageMenuItemBase;
-    auto availableLanguages = LanguageManager::getInstance().getAvailableLanguages();
-    
-    for (const auto& lang : availableLanguages)
-    {
-        bool isCurrent = (lang.id == LanguageManager::getInstance().getCurrentLanguageId());
-        languageMenu.addItem(languageMenuItemId, lang.displayName, true, isCurrent);
-        languageMenuItemId++;
-    }
-    
-    menu.addSubMenu(LanguageManager::getInstance().getLanguageLabel(), languageMenu);
-
-    // Invert Icon Color
-    menu.addItem(3, LanguageManager::getInstance().getText("invertIconColor"));
+    menu.addItem(3, LanguageManager::getInstance().getText("showMain"));
 
     menu.addSeparator();
     
@@ -322,14 +284,6 @@ void IconMenu::mouseDown(const MouseEvent& e)
     }
 }
 
-void IconMenu::mouseDoubleClick(const MouseEvent& /*e*/)
-{
-    if (mainWindow == nullptr)
-        mainWindow = std::make_unique<MainWindow>(*this);
-    else
-        mainWindow->toFront(true);
-}
-
 void IconMenu::menuInvocationCallback(int id, IconMenu* im)
 {
     // ID 1: Quit
@@ -344,31 +298,13 @@ void IconMenu::menuInvocationCallback(int id, IconMenu* im)
     {
         return im->reloadPlugins();
     }
-    
-    // ID 3: Invert Icon Color
+
     if (id == 3)
     {
-        String color = getAppProperties().getUserSettings()->getValue("icon");
-        getAppProperties().getUserSettings()->setValue("icon", color.equalsIgnoreCase("black") ? "white" : "black");
-        return im->setIcon();
-    }
-    
-    // Language selection - Handle dynamic language menu items
-    if (id >= languageMenuItemBase)
-    {
-        auto availableLanguages = LanguageManager::getInstance().getAvailableLanguages();
-        int languageIndex = id - languageMenuItemBase;
-        
-        if (languageIndex >= 0 && languageIndex < availableLanguages.size())
-        {
-            const auto& selectedLanguage = availableLanguages[languageIndex];
-            LanguageManager::getInstance().setLanguageById(selectedLanguage.id);
-
-            // Save language preference
-            getAppProperties().getUserSettings()->setValue("language", selectedLanguage.id);
-            getAppProperties().saveIfNeeded();
-            im->startTimer(50);
-            return;
+        if (im->mainWindow == nullptr) {
+            im->mainWindow = std::make_unique<MainWindow>(*im);
+        } else {
+            im->mainWindow->toFront(true);
         }
     }
 }
@@ -417,7 +353,6 @@ void IconMenu::savePluginStates()
             continue;  // Skip input/output nodes
             
         // Try to find this processor in our known plugin list to get description
-        bool found = false;
         for (const auto& desc : activePluginList.getTypes())
         {
             if (auto* pi = dynamic_cast<AudioPluginInstance*>(proc))
@@ -430,7 +365,6 @@ void IconMenu::savePluginStates()
                     MemoryBlock savedStateBinary;
                     proc->getStateInformation(savedStateBinary);
                     getAppProperties().getUserSettings()->setValue(pluginUid, savedStateBinary.toBase64Encoding());
-                    found = true;
                     break;
                 }
             }
@@ -438,30 +372,6 @@ void IconMenu::savePluginStates()
     }
     
     getAppProperties().saveIfNeeded();
-}
-
-void IconMenu::showAudioSettings()
-{
-    // 只顯示 Voicemeeter 設備，不顯示採樣率、緩衝區或頻道設置
-    AudioDeviceSelectorComponent audioSettingsComp(
-        deviceManager, 0, 0, 0, 0, false, false, false, false);
-    audioSettingsComp.setSize(300, 200);
-    
-    DialogWindow::LaunchOptions o;
-    o.content.setNonOwned(&audioSettingsComp);
-    o.dialogTitle                   = LanguageManager::getInstance().getText("audioSettings");
-    o.componentToCentreAround       = this;
-    o.dialogBackgroundColour        = Colour::fromRGB(236, 236, 236);
-    o.escapeKeyTriggersCloseButton  = true;
-    o.useNativeTitleBar             = true;
-    o.resizable                     = false;
-
-    o.runModal();
-        
-    std::unique_ptr<XmlElement> audioState(deviceManager.createStateXml());
-        
-    getAppProperties().getUserSettings()->setValue("audioDeviceState", audioState.get());
-    getAppProperties().getUserSettings()->saveIfNeeded();
 }
 
 void IconMenu::reloadPlugins()

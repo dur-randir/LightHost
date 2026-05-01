@@ -13,8 +13,6 @@
 class MainWindowContent;
 
 // ==================== Windows 平台特定類別 ====================
-#if JUCE_WINDOWS
-class VoicemeeterAudioIODeviceType;
 
 /**
  * LightHostAudioDeviceManager 類別
@@ -37,9 +35,8 @@ public:
      * 
      * @param types 用於儲存新建立的音頻設備類型的陣列
      */
-    void createAudioDeviceTypes (OwnedArray<AudioIODeviceType>& types) override;
+    //void createAudioDeviceTypes (OwnedArray<AudioIODeviceType>& types) override;
 };
-#endif
 
 // ==================== 全局函數宣告 ====================
 /**
@@ -57,7 +54,6 @@ public:
     IconMenu();
     ~IconMenu();
     void mouseDown(const MouseEvent&);
-    void mouseDoubleClick(const MouseEvent&);
     static void menuInvocationCallback(int id, IconMenu*);
     void changeListenerCallback(ChangeBroadcaster* changed);
 	static String getKey(String type, PluginDescription plugin);
@@ -66,7 +62,6 @@ public:
 private:
     void timerCallback();
     void reloadPlugins();
-    void showAudioSettings();
     void loadActivePlugins();
     void savePluginStates();
     void deletePluginStates();
