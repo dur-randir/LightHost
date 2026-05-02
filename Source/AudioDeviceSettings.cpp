@@ -82,10 +82,6 @@ void DeviceSelectorDialog::updateSelectorComponent()
         removeChildComponent(sel.get());
     }
     
-    // 重置與字體縮放相關的快取資料
-    // naturalFontHeight：儲存原始字體高度（未縮放）
-    naturalFontHeight.clear();
-    
     // naturalItemHeight：AudioDeviceSelectorComponent 原始 item 高度
     naturalItemHeight = 0;
     
@@ -126,16 +122,6 @@ void DeviceSelectorDialog::updateSelectorComponent()
 }
 
 // ---- private helpers ----
-
-void DeviceSelectorDialog::collectNaturalFonts(Component *comp)
-{
-    if (!comp)
-        return;
-    if (auto *lbl = dynamic_cast<Label *>(comp))
-        naturalFontHeight[comp] = lbl->getFont().getHeight();
-    for (int i = 0; i < comp->getNumChildComponents(); ++i)
-        collectNaturalFonts(comp->getChildComponent(i));
-}
 
 String DeviceSelectorDialog::getCurrentDeviceName() const
 {

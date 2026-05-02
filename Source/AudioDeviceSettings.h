@@ -69,9 +69,6 @@ public:
     void getPreferredSize(int &outWidth, int &outHeight) const;
 
 private:
-    /// 遞迴收集所有 Label 組件的原始字體高度
-    void collectNaturalFonts(Component *comp);
-
     /// JUCE 音訊裝置選擇器組件
     std::unique_ptr<AudioDeviceSelectorComponent> sel;
 
@@ -80,9 +77,6 @@ private:
 
     /// 初始時的最大輸入/輸出聲道數
     int initialMaxIn, initialMaxOut;
-
-    /// 儲存每個 Label 組件的原始字體高度（用於動態縮放）
-    std::map<Component *, float> naturalFontHeight;
 
     /// 選擇器的原始列表項高度
     int naturalItemHeight = 0;
