@@ -81,9 +81,6 @@ private:
     /// 遞迴收集所有 Label 組件的原始字體高度
     void collectNaturalFonts(Component *comp);
 
-    /// 遞迴應用縮放因子到所有 Label 組件的字體
-    void applyTotalScale(Component *comp, float totalScale);
-
     /// JUCE 音訊裝置選擇器組件
     std::unique_ptr<AudioDeviceSelectorComponent> sel;
 
@@ -102,9 +99,6 @@ private:
     /// 是否已準備好應用字體縮放
     bool baselinesReady = false;
 
-    /// 上次應用的縮放因子
-    float lastScale = -1.0f;
-
     /// 動態量測的實際內容高度（px），0 表示尚未量測
     int computedContentHeight = 0;
 
@@ -120,7 +114,7 @@ private:
 //   • 其他縮放時：視窗大小 = 基礎大小 × DPI × 語言縮放因子
 //   • 監控縮放因子變化並自動調整視窗大小
 //==============================================================================
-class DeviceSelectorWindow : public DocumentWindow, private Timer
+class DeviceSelectorWindow : public DocumentWindow
 {
 public:
     /// 建構函式，建立並初始化選擇器視窗
@@ -136,9 +130,6 @@ public:
     /// 解構函式
     ~DeviceSelectorWindow() override;
 
-    /// 計時器回調函式，監控縮放因子變化
-    void timerCallback() override;
-
     /// 關閉視窗並執行清理操作
     void closeWindow();
 
@@ -149,9 +140,6 @@ public:
     void updateWindowSize();
 
 private:
-    /// 上次應用的縮放因子，用於偵測變化
-    float lastAppliedScale = -1.0f;
-
     /// 使用者選擇裝置時調用的回調函式
     std::function<void(const String &)> onConfirmCallback;
 

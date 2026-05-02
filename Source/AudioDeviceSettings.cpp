@@ -57,12 +57,6 @@ void ScaleSettingsManager::saveSettings()
 // 內聯輔助函數
 //==============================================================================
 
-/// 取得 DPI 縮放因子
-inline float getDPIScaleFactor() { return ScaleSettingsManager::getInstance().getScaleFactor(); }
-
-/// 取得組合縮放因子（DPI × 語言字體縮放）
-inline float getFontScaleFactor() { return getDPIScaleFactor() * LanguageManager::getInstance().getFontScaling(); }
-
 /// 取得系統窗框高度（包括標題欄下方的邊框）
 inline int getSystemFrameHeight()
 {
@@ -132,9 +126,9 @@ private:
     float scaleFactor = 1.0f;
 };
 
-inline ScaledSelectorLookAndFeel& getScaledSelectorLookAndFeel()
+inline LookAndFeel_V3& getScaledSelectorLookAndFeel()
 {
-    static ScaledSelectorLookAndFeel lookAndFeel;
+    static LookAndFeel_V3 lookAndFeel;
     return lookAndFeel;
 }
 
@@ -159,16 +153,6 @@ DeviceSelectorDialog::~DeviceSelectorDialog()
     mgr.removeChangeListener(this);
     if (sel)
         sel->setLookAndFeel(nullptr);
-}
-
-/// 計時器回調：偵測縮放因子變化
-void DeviceSelectorDialog::timerCallback()
-{
-    float cur = getFontScaleFactor();
-    if (std::abs(cur - lastScale) < 0.005f)
-        return;
-    // 縮放改變：重建 selector（後續 async block 會量測高度並呼叫 onScaleChanged）
-    updateSelectorComponent();
 }
 
 void DeviceSelectorDialog::changeListenerCallback(ChangeBroadcaster* source)
@@ -196,10 +180,6 @@ void DeviceSelectorDialog::updateSelectorComponent()
     // baselinesReady：表示是否已收集完成基準字體資料
     baselinesReady = false;
 
-    // lastScale：記錄上一次套用的縮放比例
-    // 設為 -1 表示強制重新計算
-    lastScale = -1.0f;
-
     // computedContentHeight：重建時歸零，由 async block 重新量測
     computedContentHeight = 0;
 
@@ -218,7 +198,6 @@ void DeviceSelectorDialog::updateSelectorComponent()
     mgr.addChangeListener(this);
 
     auto& selectorLookAndFeel = getScaledSelectorLookAndFeel();
-    selectorLookAndFeel.setScaleFactor(getFontScaleFactor());
     sel->setLookAndFeel(&selectorLookAndFeel);
 
     // 加入畫面並設為可見
@@ -241,23 +220,12 @@ void DeviceSelectorDialog::updateSelectorComponent()
         // 標記基準資料已準備完成
         baselinesReady = true;
         
-        // 計算總縮放比例（通常包含 DPI + 語系縮放）
-        float totalScale = getFontScaleFactor();
-        lastScale = totalScale;
-        
-        getScaledSelectorLookAndFeel().setScaleFactor(totalScale);
-        
         // 依照縮放比例調整 item 高度
         // jmax(1, ...) 確保高度至少為 1，避免意外變 0
-        sel->setItemHeight(
-                           jmax(1, static_cast<int>(naturalItemHeight * totalScale))
-                           );
-        
-        // 對所有子元件套用整體縮放（字體、間距等）
-        applyTotalScale(sel.get(), totalScale);
+        sel->setItemHeight(jmax(1, naturalItemHeight));
         
         // 給 sel 一個足夠大的臨時大小，讓 JUCE 內部完成 layout
-        sel->setSize(static_cast<int>(420 * totalScale), 2000);
+        sel->setSize(420, 2000);
         sel->resized();
         
         // 量測所有可見子元件的最低封底邊緣，作為實際內容高度
@@ -268,7 +236,7 @@ void DeviceSelectorDialog::updateSelectorComponent()
             if (c->isVisible())
                 maxBottom = jmax(maxBottom, c->getBottom());
         }
-        computedContentHeight = (maxBottom > 30) ? maxBottom : static_cast<int>(300 * totalScale);
+        computedContentHeight = (maxBottom > 30) ? maxBottom : 300;
         
         // 通知父視窗依實際高度重新計算大小
         if (onScaleChanged)
@@ -284,22 +252,22 @@ void DeviceSelectorDialog::updateSelectorComponent()
 void DeviceSelectorDialog::resized()
 {
     // sel 直接填滿整個 Dialog（由 DeviceSelectorWindow 控制總體大小）
-    if (sel)
-        sel->setBounds(getLocalBounds());
+//    if (sel)
+//        sel->setBounds(getLocalBounds());
 
     // 重新應用字體縮放（如果縮放因子已改變）
-    if (baselinesReady)
-    {
-        float totalScale = getFontScaleFactor();
-        if (std::abs(totalScale - lastScale) > 0.005f)
-        {
-            lastScale = totalScale;
-            getScaledSelectorLookAndFeel().setScaleFactor(totalScale);
-            sel->setItemHeight(jmax(1, static_cast<int>(naturalItemHeight * totalScale)));
-            applyTotalScale(sel.get(), totalScale);
-            sel->resized();
-        }
-    }
+//    if (baselinesReady)
+//    {
+//        float totalScale = getFontScaleFactor();
+//        if (std::abs(totalScale - lastScale) > 0.005f)
+//        {
+//            lastScale = totalScale;
+//            getScaledSelectorLookAndFeel().setScaleFactor(totalScale);
+//            sel->setItemHeight(jmax(1, static_cast<int>(naturalItemHeight * totalScale)));
+//            applyTotalScale(sel.get(), totalScale);
+//            sel->resized();
+//        }
+//    }
 }
 
 // ---- private helpers ----
@@ -312,20 +280,6 @@ void DeviceSelectorDialog::collectNaturalFonts(Component *comp)
         naturalFontHeight[comp] = lbl->getFont().getHeight();
     for (int i = 0; i < comp->getNumChildComponents(); ++i)
         collectNaturalFonts(comp->getChildComponent(i));
-}
-
-void DeviceSelectorDialog::applyTotalScale(Component *comp, float totalScale)
-{
-    if (!comp)
-        return;
-    if (auto *lbl = dynamic_cast<Label *>(comp))
-    {
-        auto it = naturalFontHeight.find(comp);
-        if (it != naturalFontHeight.end())
-            lbl->setFont(lbl->getFont().withHeight(it->second * totalScale));
-    }
-    for (int i = 0; i < comp->getNumChildComponents(); ++i)
-        applyTotalScale(comp->getChildComponent(i), totalScale);
 }
 
 String DeviceSelectorDialog::getCurrentDeviceName() const
@@ -368,19 +322,6 @@ DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManag
     setTopLeftPosition(250, 150); // 預設視窗左上角座標
 }
 
-/// 解構函數：清理資源
-DeviceSelectorWindow::~DeviceSelectorWindow() { stopTimer(); }
-
-/// 計時器回調：監控縮放因子變化並更新視窗大小
-void DeviceSelectorWindow::timerCallback()
-{
-    float cur = getFontScaleFactor();
-    if (std::abs(cur - lastAppliedScale) < 0.005f)
-        return;
-    lastAppliedScale = cur;
-    updateWindowSize();
-}
-
 /// 關閉視窗並執行清理
 void DeviceSelectorWindow::closeWindow()
 {
@@ -404,13 +345,12 @@ void DeviceSelectorWindow::closeButtonPressed()
 
 void DeviceSelectorDialog::getPreferredSize(int &outWidth, int &outHeight) const
 {
-    float scale = getFontScaleFactor();
-    outWidth = static_cast<int>(420 * scale);
+    outWidth = 420;
 
     // 優先使用動態量測、否則用估算値
     int contentH = (computedContentHeight > 30)
                        ? computedContentHeight
-                       : static_cast<int>(300 * scale);
+                       : 300;
 
     outHeight = contentH + getSystemFrameHeight();
 

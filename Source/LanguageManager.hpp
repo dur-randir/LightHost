@@ -25,9 +25,6 @@ public:
     void setLanguageById(const String& languageId);
     String getCurrentLanguageId() const { return currentLanguageId; }
 
-    // Get font scaling factor for current language (e.g., 1.0 for English, 1.15 for Chinese)
-    float getFontScaling() const;
-
     // Get language label (from languageInfo.language) for menu display
     String getLanguageLabel() const;
 

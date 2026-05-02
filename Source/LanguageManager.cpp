@@ -155,24 +155,6 @@ Array<LanguageManager::LanguageInfo> LanguageManager::getAvailableLanguages() co
     return languages;
 }
 
-float LanguageManager::getFontScaling() const
-{
-    if (languageData.isObject())
-    {
-        var langInfoVar = languageData[Identifier("languageInfo")];
-        if (langInfoVar.isObject())
-        {
-            var scaling = langInfoVar[Identifier("fontScaling")];
-            if (!scaling.isVoid())
-            {
-                return static_cast<float>(scaling);
-            }
-        }
-    }
-    // Default to 1.0 if not specified
-    return 1.0f;
-}
-
 String LanguageManager::getLanguageLabel() const
 {
     if (languageData.isObject())
