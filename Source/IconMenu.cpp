@@ -94,7 +94,7 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
 
-IconMenu::IconMenu() : INDEX_EDIT(1000000), INDEX_BYPASS(2000000), INDEX_DELETE(3000000), INDEX_MOVE_UP(4000000), INDEX_MOVE_DOWN(5000000)
+IconMenu::IconMenu()
 {
     // Initiialization
     addDefaultFormatsToManager(formatManager);
@@ -153,12 +153,9 @@ IconMenu::IconMenu() : INDEX_EDIT(1000000), INDEX_BYPASS(2000000), INDEX_DELETE(
     if (savedGraphState != nullptr)
         mainContent->loadState(*savedGraphState);
     
-    //player.setProcessor(&graph);
-    //deviceManager.addAudioCallback(&player);
-
-    static MixerCallBack mcb;
-    deviceManager.addAudioCallback(&mcb);
-
+    deviceManager.addAudioCallback(&player);
+    player.setProcessor(&graph);
+   
     // After loading graph, also trigger a save to ensure all plugin states are captured
     mainContent->onGraphChanged();
     
@@ -176,18 +173,7 @@ IconMenu::~IconMenu()
 
 void IconMenu::setIcon()
 {
-	// Set menu icon - Windows only
-	Image icon;
-	String defaultColor = "white";
-	
-	if (!getAppProperties().getUserSettings()->containsKey("icon"))
-		getAppProperties().getUserSettings()->setValue("icon", defaultColor);
-	
-	String color = getAppProperties().getUserSettings()->getValue("icon");
-	if (color.equalsIgnoreCase("white"))
-		icon = ImageFileFormat::loadFrom(BinaryData::menu_icon_white_png, BinaryData::menu_icon_white_pngSize);
-	else if (color.equalsIgnoreCase("black"))
-		icon = ImageFileFormat::loadFrom(BinaryData::menu_icon_png, BinaryData::menu_icon_pngSize);
+	Image icon = ImageFileFormat::loadFrom(BinaryData::menu_icon_white_png, BinaryData::menu_icon_white_pngSize);
 	setIconImage(icon, icon);
 }
 
@@ -195,11 +181,9 @@ void IconMenu::loadActivePlugins()
 {
     // Set up the graph's fixed I/O nodes.
     // Audio routing is now driven by the NodeGraphCanvas UI.
-    inputNode  = graph.addNode(std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor>(
-                     AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode),
+    inputNode  = graph.addNode(std::make_unique<IOProcessor>(IOProcessor::audioInputNode),
                      AudioProcessorGraph::NodeID(NodeGraphCanvas::kInputNodeUID));
-    outputNode = graph.addNode(std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor>(
-                     AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode),
+    outputNode = graph.addNode(std::make_unique<IOProcessor>(IOProcessor::audioOutputNode),
                      AudioProcessorGraph::NodeID(NodeGraphCanvas::kOutputNodeUID));
 
 
@@ -306,7 +290,7 @@ void IconMenu::savePluginStates()
             continue;
             
         auto* proc = node->getProcessor();
-        bool isInputOrOutput = (dynamic_cast<AudioProcessorGraph::AudioGraphIOProcessor*>(proc) != nullptr);
+        bool isInputOrOutput = (dynamic_cast<IOProcessor*>(proc) != nullptr);
         if (isInputOrOutput)
             continue;  // Skip input/output nodes
     }
@@ -323,8 +307,6 @@ void IconMenu::reloadPlugins()
 
 void IconMenu::removePluginsLackingInputOutput()
 {
-    return;
-    
     for (const auto& plugin : knownPluginList.getTypes())
     {
         if (plugin.numInputChannels == 0 || plugin.numOutputChannels == 0)

@@ -6,9 +6,9 @@
     "fontScaling": 1.0
   },
   "appName": "Light Host",
-  "showMain": "Active Plugins",
+  "showMain": "Edit Graph",
   "preferences": "Preferences",
-  "editPlugins": "Edit Plugins",
+  "editPlugins": "Known Plugins",
   "activePlugins": "Active Plugins",
   "availablePlugins": "Available Plugins",
   "edit": "Edit",

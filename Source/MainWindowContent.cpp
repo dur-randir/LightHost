@@ -336,7 +336,9 @@ void NodeGraphCanvas::addGraphConnection(const PluginNode& from, const PluginNod
     if (!graph.addConnection({ { from.graphNodeId, 0 }, { to.graphNodeId, 0 } })) {
         DBG("WARNING: Failed to add connection (channel 0)");
     }
-    if (!graph.addConnection({ { from.graphNodeId, 1 }, { to.graphNodeId, 1 } })) {
+    
+    int from_ch = (from.graphNodeId.uid == kInputNodeUID) ? 0 : 1;
+    if (!graph.addConnection({ { from.graphNodeId, from_ch }, { to.graphNodeId, 1 } })) {
         DBG("WARNING: Failed to add connection (channel 1)");
     }
     
