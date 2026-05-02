@@ -228,6 +228,8 @@ NodeGraphCanvas::NodeGraphCanvas(AudioDeviceManager& dm,
                                  AudioProcessorGraph& g)
     : deviceManager(dm), knownPlugins(kpl), formatManager(fmt), graph(g)
 {
+    m_flogger = std::unique_ptr<FileLogger>(FileLogger::createDefaultAppLogger("LightHost", "mylog.txt", "Welcome to plugin"));
+
     setOpaque(true);
     setWantsKeyboardFocus(true);  // Enable keyboard focus for Delete key handling
 }
@@ -315,19 +317,21 @@ void NodeGraphCanvas::addNode(const String& name, NodeType type)
 // AudioProcessorGraph helpers
 // ============================================================
 
+#define DBG(text) JUCE_BLOCK_WITH_FORCED_SEMICOLON (juce::String tempDbgBuf; tempDbgBuf << text; if (m_flogger) m_flogger->logMessage(tempDbgBuf);)
+
 void NodeGraphCanvas::addGraphConnection(const PluginNode& from, const PluginNode& to)
 {
     // Verify that nodes exist in the graph
     if (!graph.getNodeForId(from.graphNodeId)) {
-        DBG("WARNING: Source node " << from.graphNodeId.uid << " not found in graph!");
+        DBG("WARNING: Source node " << String(from.graphNodeId.uid) << " not found in graph!");
         return;
     }
     if (!graph.getNodeForId(to.graphNodeId)) {
-        DBG("WARNING: Target node " << to.graphNodeId.uid << " not found in graph!");
+        DBG("WARNING: Target node " << String(to.graphNodeId.uid) << " not found in graph!");
         return;
     }
     
-    DBG("Adding connection from " << from.graphNodeId.uid << " to " << to.graphNodeId.uid);
+    DBG("Adding connection from " << String(from.graphNodeId.uid) << " to " << String(to.graphNodeId.uid));
     
     if (!graph.addConnection({ { from.graphNodeId, 0 }, { to.graphNodeId, 0 } })) {
         DBG("WARNING: Failed to add connection (channel 0)");
@@ -915,6 +919,7 @@ void NodeGraphCanvas::showPluginPicker(Point<int> canvasPos)
                     LanguageManager::getInstance().getText("cannotLoadPlugin"), err.isEmpty() ? LanguageManager::getInstance().getText("unknownError") : err);
                 return;
             }
+            instance->setPlayConfigDetails(2, 2, sr, bs);
             instance->prepareToPlay(sr, bs);
 
             // addNode() returns Node::Ptr (ReferenceCountedObjectPtr), not Node*
@@ -1269,6 +1274,7 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
                     mb.fromBase64Encoding(xState->getAllSubText());
                     instance->setStateInformation(mb.getData(), (int)mb.getSize());
                 }
+                instance->setPlayConfigDetails(2, 2, sr, bs);
                 instance->prepareToPlay(sr, bs);
                 auto nodePtr = graph.addNode(std::unique_ptr<AudioProcessor>(std::move(instance)));
                 if (nodePtr) 
@@ -1285,7 +1291,8 @@ void NodeGraphCanvas::loadState(const XmlElement& xml)
                         g_pluginListeners[nodePtr->nodeID.uid] = std::move(listener);
                     }
                     
-                    DBG("Successfully added plugin node: " << n.name << " ID: " << n.graphNodeId.uid);
+                    DBG("Successfully added plugin node: " << n.name);
+                    DBG(" ID: " << String(n.graphNodeId.uid));
                 }
                 else
                 {

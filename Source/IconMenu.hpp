@@ -22,6 +22,37 @@ class MainWindowContent;
  */
 ApplicationProperties& getAppProperties();
 
+class MixerCallBack : public AudioIODeviceCallback
+{
+public:
+    std::unique_ptr<FileLogger> m_flogger;
+
+    MixerCallBack() {
+        m_flogger = std::unique_ptr<FileLogger>(FileLogger::createDefaultAppLogger("LightHost", "mylog.txt", "Welcome to mcb"));
+    }
+    ~MixerCallBack() {
+        //if (m_flogger)
+            m_flogger->logMessage("~MixerCallBack()");
+    }
+
+    void audioDeviceIOCallback(const float **inputChannelData, int numInputChannels, float **outputChannelData, int numOutputChannels, int numSamples) 
+    {
+        //if (m_flogger)
+            m_flogger->logMessage("audioDeviceIOCallback()");
+
+        for (int i=0;i<numOutputChannels;++i)
+               {
+                   for (int j=0;j<numSamples;++j)
+                   {
+                       outputChannelData[i][j] = 0.0f;
+                   }
+               }
+    }
+    
+    void audioDeviceAboutToStart(juce::AudioIODevice *device) override  {}
+    void audioDeviceStopped() override {}
+};
+
 class IconMenu : public SystemTrayIconComponent, private Timer, public ChangeListener
 {
 public:

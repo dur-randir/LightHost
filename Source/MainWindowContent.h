@@ -62,6 +62,8 @@ public:
     static constexpr int kZoneW = 170;
     static constexpr int kHdrH  = 34;
     
+    std::unique_ptr<FileLogger> m_flogger;
+    
     // Methods to get scaled sizes
     static int getZoneWidth()  { return static_cast<int>(kZoneW * getDPIScaleFactor()); }
     static int getHeaderHeight() { return static_cast<int>(kHdrH * getDPIScaleFactor()); }

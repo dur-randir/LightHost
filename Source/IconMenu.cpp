@@ -105,9 +105,8 @@ IconMenu::IconMenu() : INDEX_EDIT(1000000), INDEX_BYPASS(2000000), INDEX_DELETE(
     
     // Audio device
     std::unique_ptr<XmlElement> savedAudioState (getAppProperties().getUserSettings()->getXmlValue("audioDeviceState"));
-    deviceManager.initialise(256, 256, savedAudioState.get(), true);
-    player.setProcessor(&graph);
-    deviceManager.addAudioCallback(&player);
+    deviceManager.initialise(2, 2, savedAudioState.get(), true);
+
     // Plugins - all
     std::unique_ptr<XmlElement> savedPluginList(getAppProperties().getUserSettings()->getXmlValue("pluginList"));
     if (savedPluginList != nullptr)
@@ -154,9 +153,15 @@ IconMenu::IconMenu() : INDEX_EDIT(1000000), INDEX_BYPASS(2000000), INDEX_DELETE(
     if (savedGraphState != nullptr)
         mainContent->loadState(*savedGraphState);
     
+    //player.setProcessor(&graph);
+    //deviceManager.addAudioCallback(&player);
+
+    static MixerCallBack mcb;
+    deviceManager.addAudioCallback(&mcb);
+
     // After loading graph, also trigger a save to ensure all plugin states are captured
     mainContent->onGraphChanged();
-
+    
 	setIcon();
 	setIconTooltip(LanguageManager::getInstance().getText("appName"));
 }
@@ -188,21 +193,29 @@ void IconMenu::setIcon()
 
 void IconMenu::loadActivePlugins()
 {
-    const int INPUT  = 1000000;
-    const int OUTPUT = INPUT + 1;
-
-    PluginWindow::closeAllCurrentlyOpenWindows();
-    graph.clear();
-
     // Set up the graph's fixed I/O nodes.
     // Audio routing is now driven by the NodeGraphCanvas UI.
     inputNode  = graph.addNode(std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor>(
                      AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode),
-                     AudioProcessorGraph::NodeID(INPUT));
+                     AudioProcessorGraph::NodeID(NodeGraphCanvas::kInputNodeUID));
     outputNode = graph.addNode(std::make_unique<AudioProcessorGraph::AudioGraphIOProcessor>(
                      AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode),
-                     AudioProcessorGraph::NodeID(OUTPUT));
+                     AudioProcessorGraph::NodeID(NodeGraphCanvas::kOutputNodeUID));
 
+
+    double sr = 44100.0;
+    int    bs = 512;
+    if (auto* dev = deviceManager.getCurrentAudioDevice())
+    {
+        sr = dev->getCurrentSampleRate();
+        bs = dev->getCurrentBufferSizeSamples();
+    }
+
+    inputNode->getProcessor()->setPlayConfigDetails(1, 2, sr, bs);
+    inputNode->getProcessor()->prepareToPlay(sr, bs);
+    outputNode->getProcessor()->setPlayConfigDetails(2, 2, sr, bs);
+    outputNode->getProcessor()->prepareToPlay(sr, bs);
+    
     // NOTE: Plugin loading and connection routing is now handled by
     // the NodeGraphCanvas (MainWindowContent). Draw wires in the canvas
     // to route audio: Input → Plugin → Output.
