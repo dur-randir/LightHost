@@ -169,7 +169,7 @@ void NodeGraphCanvas::addGraphConnection(const PluginNode& from, const PluginNod
         DBG("WARNING: Failed to add connection (channel 0)");
     }
     
-    int from_ch = (from.graphNodeId.uid == kInputNodeUID) ? 0 : 1;
+    int from_ch = (from.type == NodeType::Input) ? 0 : 1;
     if (!graph.addConnection({ { from.graphNodeId, from_ch }, { to.graphNodeId, 1 } })) {
         DBG("WARNING: Failed to add connection (channel 1)");
     }
@@ -851,7 +851,7 @@ void NodeGraphCanvas::removeNode(int nodeId)
 
 bool NodeGraphCanvas::keyPressed(const KeyPress& key)
 {
-    if (key.getKeyCode() == KeyPress::deleteKey && selectedNode >= 0)
+    if ((key.getKeyCode() == KeyPress::deleteKey || key.getKeyCode() == KeyPress::backspaceKey) && selectedNode >= 0)
     {
         removeNode(selectedNode);
         return true;

@@ -10,7 +10,7 @@
 #define IconMenu_hpp
 
 #include "LanguageManager.hpp"
-class MainWindowContent;
+#include "MainWindowContent.h"
 
 // ==================== 全局函數宣告 ====================
 /**
@@ -31,7 +31,6 @@ public:
     void mouseDown(const MouseEvent&);
     static void menuInvocationCallback(int id, IconMenu*);
     void changeListenerCallback(ChangeBroadcaster* changed);
-	static String getKey(String type, PluginDescription plugin);
     
 private:
     void timerCallback();
@@ -47,9 +46,7 @@ private:
     
     AudioPluginFormatManager formatManager;
     KnownPluginList knownPluginList;
-    Array<PluginDescription> pluginMenuTypes;
     PopupMenu menu;
-    std::unique_ptr<PluginDirectoryScanner> scanner;
     AudioProcessorGraph graph;
     AudioProcessorPlayer player;
     AudioProcessorGraph::Node *inputNode;

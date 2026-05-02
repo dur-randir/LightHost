@@ -18,17 +18,11 @@ struct PluginNode
     /** Corresponding AudioProcessorGraph NodeID (0 = not in graph yet). */
     AudioProcessorGraph::NodeID graphNodeId { 0 };
 
-    // Base sizes
-    static constexpr int kW      = 140;
-    static constexpr int kH      = 56;
-    static constexpr int kSideH  = 40;
-    static constexpr int kPortR  = 7;
-    
     // Methods to get scaled sizes
-    static int getWidth()    { return kW; }
-    static int getHeight()   { return kH; }
-    static int getSideHeight() { return kSideH; }
-    static int getPortRadius() { return kPortR; }
+    static int getWidth()    { return 170; }
+    static int getHeight()   { return 56; }
+    static int getSideHeight() { return 40; }
+    static int getPortRadius() { return 7; }
 
     bool hasInputPort()  const { return type != NodeType::Input;  }
     bool hasOutputPort() const { return type != NodeType::Output; }
@@ -52,15 +46,11 @@ struct NodeWire { int fromNode { -1 }; int toNode { -1 }; };
 class NodeGraphCanvas : public Component
 {
 public:
-    // Base sizes
-    static constexpr int kZoneW = 170;
-    static constexpr int kHdrH  = 34;
-    
     std::unique_ptr<FileLogger> m_flogger;
     
     // Methods to get scaled sizes
-    static int getZoneWidth()  { return kZoneW; }
-    static int getHeaderHeight() { return kHdrH; }
+    static int getZoneWidth()  { return 170; }
+    static int getHeaderHeight() { return 35; }
 
     static constexpr uint32 kInputNodeUID  = 1000000;
     static constexpr uint32 kOutputNodeUID = 1000001;

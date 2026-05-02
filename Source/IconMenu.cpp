@@ -10,7 +10,6 @@
 #include "IconMenu.hpp"
 #include "LanguageManager.hpp"
 #include "PluginWindow.h"
-#include "MainWindowContent.h"
 #include <ctime>
 #include <limits.h>
 
@@ -272,12 +271,6 @@ void IconMenu::menuInvocationCallback(int id, IconMenu* im)
     }
 }
 
-String IconMenu::getKey(String type, PluginDescription plugin)
-{
-	String key = "plugin-" + type.toLowerCase() + "-" + plugin.name + plugin.version + plugin.pluginFormatName;
-	return key;
-}
-
 void IconMenu::savePluginStates()
 {
     // The graph now saves via nodeGraphState XML which includes plugin state info
@@ -307,6 +300,8 @@ void IconMenu::reloadPlugins()
 
 void IconMenu::removePluginsLackingInputOutput()
 {
+    return; // somehow the rest is fucked up
+
     for (const auto& plugin : knownPluginList.getTypes())
     {
         if (plugin.numInputChannels == 0 || plugin.numOutputChannels == 0)
