@@ -143,13 +143,11 @@ DeviceSelectorDialog::DeviceSelectorDialog(AudioDeviceManager &dm, int maxIn, in
 {
     updateSelectorComponent();
     mSelectedDeviceName = getCurrentDeviceName();
-    startTimer(150);
 }
 
 /// 解構函數
 DeviceSelectorDialog::~DeviceSelectorDialog()
 {
-    stopTimer();
     mgr.removeChangeListener(this);
     if (sel)
         sel->setLookAndFeel(nullptr);

@@ -44,7 +44,7 @@ private:
 //   • 作為 DeviceSelectorWindow 的內容組件運作
 //   • 視窗關閉按鈕由父視窗管理
 //==============================================================================
-class DeviceSelectorDialog : public Component, private Timer, public ChangeListener
+class DeviceSelectorDialog : public Component, public ChangeListener
 {
 public:
     /// 當縮放因子改變時，通知父視窗重新計算大小
@@ -61,7 +61,6 @@ public:
     ~DeviceSelectorDialog() override;
 
     /// 計時器回調：偵測縮放變化
-    void timerCallback() override;
     void changeListenerCallback(ChangeBroadcaster* source) override;
     
     /// 重新建立 AudioDeviceSelectorComponent 實例並應用縮放
@@ -128,7 +127,7 @@ public:
                          std::function<void(const String &)> cb);
 
     /// 解構函式
-    ~DeviceSelectorWindow() override;
+    ~DeviceSelectorWindow() override {}
 
     /// 關閉視窗並執行清理操作
     void closeWindow();
