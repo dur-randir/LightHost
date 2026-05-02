@@ -44,12 +44,10 @@ private:
 //   • 作為 DeviceSelectorWindow 的內容組件運作
 //   • 視窗關閉按鈕由父視窗管理
 //==============================================================================
-class DeviceSelectorDialog : public Component, public ChangeListener
+class DeviceSelectorDialog : public Component
 {
 public:
-    /// 當縮放因子改變時，通知父視窗重新計算大小
     std::function<void()> onScaleChanged;
-    String mSelectedDeviceName;
 
     /// 建構函式
     /// @param dm     音訊裝置管理器
@@ -60,14 +58,8 @@ public:
     /// 解構函式
     ~DeviceSelectorDialog() override;
 
-    /// 計時器回調：偵測縮放變化
-    void changeListenerCallback(ChangeBroadcaster* source) override;
-    
     /// 重新建立 AudioDeviceSelectorComponent 實例並應用縮放
     void updateSelectorComponent();
-
-    /// 調整子組件大小和位置
-    void resized() override;
 
     /// 取得當前選擇的音訊設備名稱
     String getCurrentDeviceName() const;
@@ -94,9 +86,6 @@ private:
 
     /// 選擇器的原始列表項高度
     int naturalItemHeight = 0;
-
-    /// 是否已準備好應用字體縮放
-    bool baselinesReady = false;
 
     /// 動態量測的實際內容高度（px），0 表示尚未量測
     int computedContentHeight = 0;

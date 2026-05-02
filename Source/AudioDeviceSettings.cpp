@@ -54,85 +54,6 @@ void ScaleSettingsManager::saveSettings()
 }
 
 //==============================================================================
-// 內聯輔助函數
-//==============================================================================
-
-/// 取得系統窗框高度（包括標題欄下方的邊框）
-inline int getSystemFrameHeight()
-{
-    //int frameHeight = GetSystemMetrics(SM_CYFRAME);
-    //int buttonHeight = GetSystemMetrics(SM_CYSIZE);
-    //return frameHeight + buttonHeight;
-
-    return 12;
-}
-
-class ScaledSelectorLookAndFeel : public LookAndFeel_V3
-{
-public:
-    void setScaleFactor(float newScale)
-    {
-        scaleFactor = jmax(0.5f, newScale);
-    }
-
-    Font getComboBoxFont(ComboBox& box) override
-    {
-        const float baseHeight = LookAndFeel_V3::getComboBoxFont(box).getHeight();
-        const float scaledHeight = baseHeight * scaleFactor;
-        const float maxHeight = static_cast<float>(box.getHeight()) * 0.85f;
-        return Font(FontOptions{}.withHeight(jmin(scaledHeight, maxHeight)));
-    }
-
-    Font getPopupMenuFont() override
-    {
-        const float baseHeight = LookAndFeel_V3::getPopupMenuFont().getHeight();
-        return Font(FontOptions{}.withHeight(baseHeight * scaleFactor));
-    }
-
-    Font getTextButtonFont(TextButton& button, int buttonHeight) override
-    {
-        const float baseHeight = LookAndFeel_V3::getTextButtonFont(button, buttonHeight).getHeight();
-        const float scaledHeight = baseHeight * scaleFactor;
-        const float maxHeight = static_cast<float>(buttonHeight) * 0.7f;
-        return Font(FontOptions{}.withHeight(jmin(scaledHeight, maxHeight)));
-    }
-
-    void drawToggleButton(Graphics& g, ToggleButton& button,
-                          bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
-    {
-        const auto fontSize = jmin(15.0f * scaleFactor, static_cast<float>(button.getHeight()) * 0.75f);
-        const auto tickWidth = fontSize * 1.1f;
-
-        drawTickBox(g, button, 4.0f, (static_cast<float>(button.getHeight()) - tickWidth) * 0.5f,
-                    tickWidth, tickWidth,
-                    button.getToggleState(),
-                    button.isEnabled(),
-                    shouldDrawButtonAsHighlighted,
-                    shouldDrawButtonAsDown);
-
-        g.setColour(button.findColour(ToggleButton::textColourId));
-        g.setFont(fontSize);
-
-        if (!button.isEnabled())
-            g.setOpacity(0.5f);
-
-        g.drawFittedText(button.getButtonText(),
-                         button.getLocalBounds().withTrimmedLeft(roundToInt(tickWidth) + 5)
-                                                .withTrimmedRight(2),
-                         Justification::centredLeft, 10);
-    }
-
-private:
-    float scaleFactor = 1.0f;
-};
-
-inline LookAndFeel_V3& getScaledSelectorLookAndFeel()
-{
-    static LookAndFeel_V3 lookAndFeel;
-    return lookAndFeel;
-}
-
-//==============================================================================
 // DeviceSelectorDialog 實現
 // 顯示 JUCE AudioDeviceSelectorComponent 並應用動態縮放
 //==============================================================================
@@ -142,20 +63,13 @@ DeviceSelectorDialog::DeviceSelectorDialog(AudioDeviceManager &dm, int maxIn, in
     : mgr(dm), initialMaxIn(maxIn), initialMaxOut(maxOut)
 {
     updateSelectorComponent();
-    mSelectedDeviceName = getCurrentDeviceName();
 }
 
 /// 解構函數
 DeviceSelectorDialog::~DeviceSelectorDialog()
 {
-    mgr.removeChangeListener(this);
     if (sel)
         sel->setLookAndFeel(nullptr);
-}
-
-void DeviceSelectorDialog::changeListenerCallback(ChangeBroadcaster* source)
-{
-   mSelectedDeviceName = getCurrentDeviceName();
 }
 
 void DeviceSelectorDialog::updateSelectorComponent()
@@ -167,20 +81,17 @@ void DeviceSelectorDialog::updateSelectorComponent()
         sel->setLookAndFeel(nullptr);
         removeChildComponent(sel.get());
     }
-
+    
     // 重置與字體縮放相關的快取資料
     // naturalFontHeight：儲存原始字體高度（未縮放）
     naturalFontHeight.clear();
-
+    
     // naturalItemHeight：AudioDeviceSelectorComponent 原始 item 高度
     naturalItemHeight = 0;
-
-    // baselinesReady：表示是否已收集完成基準字體資料
-    baselinesReady = false;
-
+    
     // computedContentHeight：重建時歸零，由 async block 重新量測
     computedContentHeight = 0;
-
+    
     // 建立新的 AudioDeviceSelectorComponent
     //
     // 參數說明：
@@ -191,81 +102,27 @@ void DeviceSelectorDialog::updateSelectorComponent()
     // initialMaxOut : 最大輸出通道數
     // false ×4     : 不顯示 MIDI、音訊設定、進階選項
     sel = std::make_unique<AudioDeviceSelectorComponent>(
-        mgr, 0, initialMaxIn, 0, initialMaxOut,
-        false, false, false, false);
-    mgr.addChangeListener(this);
-
-    auto& selectorLookAndFeel = getScaledSelectorLookAndFeel();
-    sel->setLookAndFeel(&selectorLookAndFeel);
-
+                                                         mgr, 0, initialMaxIn, 0, initialMaxOut,
+                                                         false, false, false, false);
+    
+    //auto& selectorLookAndFeel = getScaledSelectorLookAndFeel();
+    //sel->setLookAndFeel(&selectorLookAndFeel);
+    
     // 加入畫面並設為可見
     addAndMakeVisible(sel.get());
-
-    // 使用 callAsync 是因為：
-    // 1. 需要等元件真正加入並完成 layout
-    // 2. 某些字體與 itemHeight 要在 UI thread 完整建立後才準確
-    MessageManager::callAsync([this]{
-        // 若在這期間 sel 被刪除，直接安全退出
-        if (!sel) return;
-        
-        // 取得原始 item 高度（未經縮放）
-        naturalItemHeight = sel->getItemHeight();
-        
-        // 收集所有子元件的原始字體大小
-        // 這樣之後才能按比例縮放
-        collectNaturalFonts(sel.get());
-        
-        // 標記基準資料已準備完成
-        baselinesReady = true;
-        
-        // 依照縮放比例調整 item 高度
-        // jmax(1, ...) 確保高度至少為 1，避免意外變 0
-        sel->setItemHeight(jmax(1, naturalItemHeight));
-        
-        // 給 sel 一個足夠大的臨時大小，讓 JUCE 內部完成 layout
-        sel->setSize(420, 2000);
-        sel->resized();
-        
-        // 量測所有可見子元件的最低封底邊緣，作為實際內容高度
-        int maxBottom = 0;
-        for (int i = 0; i < sel->getNumChildComponents(); ++i)
-        {
-            auto* c = sel->getChildComponent(i);
-            if (c->isVisible())
-                maxBottom = jmax(maxBottom, c->getBottom());
-        }
-        computedContentHeight = (maxBottom > 30) ? maxBottom : 300;
-        
-        // 通知父視窗依實際高度重新計算大小
-        if (onScaleChanged)
-            onScaleChanged();
-        
-        // 重新 layout（此時大小由 Window 設定，會再觸發 resized())
-        if (getHeight() > 0)
-            resized();
-    });
-}
-
-/// 調整子組件大小和位置
-void DeviceSelectorDialog::resized()
-{
-    // sel 直接填滿整個 Dialog（由 DeviceSelectorWindow 控制總體大小）
-//    if (sel)
-//        sel->setBounds(getLocalBounds());
-
-    // 重新應用字體縮放（如果縮放因子已改變）
-//    if (baselinesReady)
-//    {
-//        float totalScale = getFontScaleFactor();
-//        if (std::abs(totalScale - lastScale) > 0.005f)
-//        {
-//            lastScale = totalScale;
-//            getScaledSelectorLookAndFeel().setScaleFactor(totalScale);
-//            sel->setItemHeight(jmax(1, static_cast<int>(naturalItemHeight * totalScale)));
-//            applyTotalScale(sel.get(), totalScale);
-//            sel->resized();
-//        }
-//    }
+    
+    sel->setSize(420, 2000);
+    int maxBottom = 0;
+    for (int i = 0; i < sel->getNumChildComponents(); ++i)
+    {
+        auto* c = sel->getChildComponent(i);
+        if (c->isVisible())
+            maxBottom = jmax(maxBottom, c->getBottom());
+    }
+    computedContentHeight = (maxBottom > 30) ? maxBottom : 300;
+    
+    if (onScaleChanged)
+        onScaleChanged();
 }
 
 // ---- private helpers ----
@@ -304,8 +161,6 @@ DeviceSelectorWindow::DeviceSelectorWindow(const String &title, AudioDeviceManag
 {
     // 創建並設定對話框組件
     auto *dlg = new DeviceSelectorDialog(dm, maxIn, maxOut);
-
-    // Dialog 偵測到縮放變化時通知 Window 重新計算大小
     dlg->onScaleChanged = [this]
     { updateWindowSize(); };
 
@@ -350,7 +205,7 @@ void DeviceSelectorDialog::getPreferredSize(int &outWidth, int &outHeight) const
                        ? computedContentHeight
                        : 300;
 
-    outHeight = contentH + getSystemFrameHeight();
+    outHeight = contentH + 12;
 
     // 上限：不超過主螢幕可用區高度 − 50px
     auto &displays = Desktop::getInstance().getDisplays();
