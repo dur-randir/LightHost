@@ -1066,14 +1066,6 @@ MainWindowContent::MainWindowContent(AudioDeviceManager&      dm,
     };
 
     addAndMakeVisible(*graphCanvas);
-
-    // Create Settings button (added last so it appears on top)
-    settingsBtn = std::make_unique<TextButton>(LanguageManager::getInstance().getText("settings"));
-    settingsBtn->setColour(TextButton::buttonColourId, Colour::fromRGB(70, 130, 180));
-    settingsBtn->setColour(TextButton::textColourOffId, Colours::white);
-    settingsBtn->onClick = [this] { showScaleSettings(); };
-    settingsBtn->setBounds(8, 8, 70, 28);  // Initial bounds
-    addAndMakeVisible(*settingsBtn);
 }
 
 void MainWindowContent::showInputDialog()
@@ -1110,30 +1102,6 @@ void MainWindowContent::showOutputDialog()
     wnd->toFront(true);
 }
 
-void MainWindowContent::showScaleSettings()
-{
-    // If already open, bring to front instead of opening a second window
-    if (scaleSettingsWnd != nullptr)
-    {
-        scaleSettingsWnd->toFront(true);
-        return;
-    }
-    auto* wnd = new ScaleSettingsWindow();
-    scaleSettingsWnd = wnd;  // SafePointer will auto-null when window is deleted
-    wnd->onScaleChanged = [this]
-    {
-        // 縮放改變後：更新主視窗 layout
-        resized();
-        repaint();
-        // 通知外層（IconMenu）調整主視窗大小
-        if (onScaleChanged) onScaleChanged();
-    };
-    wnd->addToDesktop(ComponentPeer::windowIsResizable);
-    wnd->setVisible(true);
-    wnd->grabKeyboardFocus();
-    wnd->toFront(true);
-}
-
 void MainWindowContent::paint(Graphics& g) { g.fillAll(NP::bg); }
 
 void MainWindowContent::resized()
@@ -1147,10 +1115,6 @@ void MainWindowContent::resized()
     
     // Graph canvas fills most of the space
     graphCanvas->setBounds(bounds);
-    
-    // Settings button at bottom-left (positioned after canvas so it's in front)
-    int bottomY = getHeight() - btnHeight - padding;
-    settingsBtn->setBounds(padding, bottomY, btnWidth, btnHeight);
 }
 
 std::unique_ptr<XmlElement> NodeGraphCanvas::saveState() const

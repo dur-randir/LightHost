@@ -179,12 +179,9 @@ private:
     AudioDeviceManager&       deviceManager;
 
     std::unique_ptr<NodeGraphCanvas> graphCanvas;
-    std::unique_ptr<TextButton> settingsBtn;
-    Component::SafePointer<Component> scaleSettingsWnd;  // Track open scale settings window
 
     void showInputDialog();
     void showOutputDialog();
-    void showScaleSettings();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindowContent)
 };
