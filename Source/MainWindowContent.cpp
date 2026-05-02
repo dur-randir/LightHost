@@ -31,174 +31,6 @@ namespace NP
     const Colour wireBad    { 0xFFCC2222 };
 }
 
-// ============================================================
-// DPI Scaling — Get user-configured scale factor
-// ============================================================
-inline float getDPIScaleFactor()
-{
-    return ScaleSettingsManager::getInstance().getScaleFactor();
-}
-
-// ============================================================
-// Font Scaling — Combines DPI scaling with language-specific font scaling
-// ============================================================
-inline float getFontScaleFactor()
-{
-    return getDPIScaleFactor() * LanguageManager::getInstance().getFontScaling();
-}
-
-// ============================================================
-// ScaleSettingsDialog - Settings window for scale factor
-// ============================================================
-
-class ScaleSettingsContentComponent : public Component
-{
-public:
-    std::function<void()> onScaleChanged;
-
-    ScaleSettingsContentComponent()
-    {
-        label = std::make_unique<Label>("lbl", LanguageManager::getInstance().getText("scaleFactorTitle"));
-        label->setColour(Label::textColourId, Colours::black);
-        label->setJustificationType(Justification::centredLeft);
-        addAndMakeVisible(label.get());
-
-        combo = std::make_unique<ComboBox>("scaleCombo");
-        combo->addItem("100%", 1);
-        combo->addItem("125%", 2);
-        combo->addItem("150%", 3);
-        combo->addItem("200%", 4);
-
-        float cur = ScaleSettingsManager::getInstance().getScaleFactor();
-        if      (fabs(cur - 1.00f) < 0.01f) combo->setSelectedId(1, dontSendNotification);
-        else if (fabs(cur - 1.25f) < 0.01f) combo->setSelectedId(2, dontSendNotification);
-        else if (fabs(cur - 1.50f) < 0.01f) combo->setSelectedId(3, dontSendNotification);
-        else if (fabs(cur - 2.00f) < 0.01f) combo->setSelectedId(4, dontSendNotification);
-        else                                 combo->setSelectedId(1, dontSendNotification);
-
-        combo->onChange = [this]
-        {
-            const float scales[] = { 1.0f, 1.25f, 1.5f, 2.0f };
-            int id = combo->getSelectedId();
-            if (id >= 1 && id <= 4)
-            {
-                ScaleSettingsManager::getInstance().setScaleFactor(scales[id - 1]);
-                if (onScaleChanged) onScaleChanged();
-            }
-        };
-        addAndMakeVisible(combo.get());
-
-        okButton = std::make_unique<TextButton>(LanguageManager::getInstance().getText("OK"));
-        okButton->setColour(TextButton::buttonColourId,   Colour::fromRGB(70, 130, 180));
-        okButton->setColour(TextButton::textColourOffId,  Colours::white);
-        okButton->setColour(TextButton::buttonOnColourId, Colour::fromRGB(40, 100, 150));
-        okButton->setColour(TextButton::textColourOnId,   Colours::white);
-        okButton->onClick = [this]
-        {
-            for (auto* p = getParentComponent(); p != nullptr; p = p->getParentComponent())
-                if (auto* rw = dynamic_cast<ResizableWindow*>(p))
-                    { rw->removeFromDesktop(); delete rw; break; }
-        };
-        addAndMakeVisible(okButton.get());
-    }
-
-    void paint(Graphics& g) override { g.fillAll(Colour::fromRGB(236, 236, 236)); }
-
-    void resized() override
-    {
-        const float scale = getFontScaleFactor();
-
-        const int pad  = jmax(4, roundToInt(10.0f * scale));
-        const int rowH = jmax(18, roundToInt(26.0f * scale));
-        const int lblH = jmax(14, roundToInt(18.0f * scale));
-        const int gap  = jmax(2, roundToInt(6.0f * scale));
-        const int btnW = jmax(50, roundToInt(72.0f * scale));
-
-        auto b = getLocalBounds().reduced(pad);
-
-        label->setFont(Font(FontOptions{}.withHeight(14.0f * scale)));
-        label->setBounds(b.removeFromTop(lblH));
-        b.removeFromTop(gap);
-
-        combo->setBounds(b.removeFromTop(rowH));
-        b.removeFromTop(gap);
-
-        auto btnRow = b.removeFromTop(rowH);
-        okButton->setBounds(btnRow.removeFromRight(btnW));
-    }
-
-private:
-    std::unique_ptr<Label>      label;
-    std::unique_ptr<ComboBox>   combo;
-    std::unique_ptr<TextButton> okButton;
-};
-
-class ScaleSettingsWindow : public ResizableWindow, private Timer
-{
-public:
-    std::function<void()> onScaleChanged;
-
-    ScaleSettingsWindow()
-        : ResizableWindow(LanguageManager::getInstance().getText("scaleSettings"),
-                          Colour(0xFFECECEC), true)
-    {
-        auto* content = new ScaleSettingsContentComponent();
-        content->onScaleChanged = [this]
-        {
-            updateWindowSize(/*keepCentre*/ true);
-            if (onScaleChanged) onScaleChanged();
-        };
-
-        setContentOwned(content, true);
-        setUsingNativeTitleBar(true);
-        setResizable(false, false);
-        setBackgroundColour(Colour::fromRGB(236, 236, 236));
-
-        updateWindowSize(/*keepCentre*/ false);
-        lastAppliedScale = getFontScaleFactor();
-        startTimerHz(10);
-    }
-
-    ~ScaleSettingsWindow() override
-    {
-        stopTimer();
-    }
-
-private:
-    float lastAppliedScale = -1.0f;
-
-    void timerCallback() override
-    {
-        const float cur = getFontScaleFactor();
-        if (std::abs(cur - lastAppliedScale) < 0.005f)
-            return;
-
-        lastAppliedScale = cur;
-        updateWindowSize(/*keepCentre*/ true);
-    }
-
-    void updateWindowSize(bool keepCentre)
-    {
-        const float scale = getFontScaleFactor();
-        const int width = jmax(280, roundToInt(320.0f * scale));
-        const int height = jmax(120, roundToInt(135.0f * scale));
-
-        if (keepCentre && getWidth() > 0 && getHeight() > 0)
-        {
-            const auto centre = getBounds().getCentre();
-            setSize(width, height);
-            setCentrePosition(centre);
-        }
-        else
-        {
-            centreWithSize(width, height);
-        }
-    }
-};
-
-// ============================================================
-// ScaleSettingsDialog - Settings window for scale factor
-// ============================================================
 class PluginParameterListener : public AudioProcessorListener
 {
 public:
@@ -432,7 +264,7 @@ void NodeGraphCanvas::drawZoneBackgrounds(Graphics& g) const
         g.setColour(NP::zoneHeader);
         g.fillRect(hdr);
         g.setColour(NP::zoneTitle);
-        g.setFont(Font(FontOptions{}.withHeight(13.5f * getFontScaleFactor()).withStyle("Bold")));
+        g.setFont(Font(FontOptions{}.withHeight(13.5f).withStyle("Bold")));
         g.drawText(title, hdr, Justification::centred, false);
     };
     drawHeader(0,        LanguageManager::getInstance().getText("inputPorts"));
@@ -445,7 +277,7 @@ void NodeGraphCanvas::drawZoneBackgrounds(Graphics& g) const
         if (nd.type == NodeType::Output) hasOut = true;
     }
     g.setColour(Colour(0xFF999999));
-    g.setFont(Font(FontOptions{}.withHeight(11.f * getFontScaleFactor())));
+    g.setFont(Font(FontOptions{}.withHeight(11.f)));
     if (!hasIn)  g.drawText(LanguageManager::getInstance().getText("doubleClickToAdd"), Rectangle<int>(0, getHeaderHeight(), getZoneWidth(), 22),        Justification::centred, false);
     if (!hasOut) g.drawText(LanguageManager::getInstance().getText("doubleClickToAdd"), Rectangle<int>(w-getZoneWidth(), getHeaderHeight(), getZoneWidth(), 22), Justification::centred, false);
 }
@@ -474,7 +306,7 @@ void NodeGraphCanvas::drawNode(Graphics& g, const PluginNode& n) const
             ? b.reduced(8, 0).withTrimmedRight(16)
             : b.reduced(8, 0).withTrimmedLeft(16);
         g.setColour(NP::rowText);
-        g.setFont(Font(FontOptions{}.withHeight(12.f * getFontScaleFactor())));
+        g.setFont(Font(FontOptions{}.withHeight(12.f)));
         g.drawText(n.name, textRect, Justification::centredLeft, true);
 
         // Port dot on inner edge
@@ -504,11 +336,11 @@ void NodeGraphCanvas::drawNode(Graphics& g, const PluginNode& n) const
     }
 
     g.setColour(NP::nodeText);
-    g.setFont(Font(FontOptions{}.withHeight(12.f * getFontScaleFactor()).withStyle("Bold")));
+    g.setFont(Font(FontOptions{}.withHeight(12.f).withStyle("Bold")));
     g.drawText(n.name, n.bounds().reduced(PluginNode::getPortRadius() + 4, 0), Justification::centred, true);
 
     g.setColour(NP::nodeHint);
-    g.setFont(Font(FontOptions{}.withHeight(10.f * getFontScaleFactor())));
+    g.setFont(Font(FontOptions{}.withHeight(10.f)));
     g.drawText(LanguageManager::getInstance().getText("doubleClick"), n.bounds().withTrimmedTop(n.bounds().getHeight() / 2 + 2),
                Justification::centred, false);
 
@@ -593,7 +425,7 @@ void NodeGraphCanvas::paint(Graphics& g)
     if (!hasPlugin)
     {
         g.setColour(Colour(0xFF999999));
-        g.setFont(Font(FontOptions{}.withHeight(11.f * getFontScaleFactor())));
+        g.setFont(Font(FontOptions{}.withHeight(11.f)));
         g.drawText(LanguageManager::getInstance().getText("doubleClickToAddPlugin"),
             Rectangle<int>(getZoneWidth(), 0, getWidth()-2*getZoneWidth(), getHeight()),
             Justification::centred, false);
@@ -1037,9 +869,6 @@ MainWindowContent::MainWindowContent(AudioDeviceManager&      dm,
                                      AudioProcessorGraph&      g)
     : deviceManager(dm)
 {
-    // Load scale settings from ApplicationProperties
-    ScaleSettingsManager::getInstance().loadSettings();
-    
     graphCanvas = std::make_unique<NodeGraphCanvas>(dm, kpl, fmt, g);
 
     graphCanvas->onDoubleClickLeft  = [this] { showInputDialog();  };
@@ -1107,13 +936,6 @@ void MainWindowContent::paint(Graphics& g) { g.fillAll(NP::bg); }
 void MainWindowContent::resized()
 {
     auto bounds = getLocalBounds();
-    
-    // Settings button in bottom-left (scaled with DPI)
-    int btnHeight = static_cast<int>(28 * getDPIScaleFactor());
-    int btnWidth = static_cast<int>(70 * getDPIScaleFactor());
-    int padding = 8;
-    
-    // Graph canvas fills most of the space
     graphCanvas->setBounds(bounds);
 }
 

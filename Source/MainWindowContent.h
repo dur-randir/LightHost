@@ -3,12 +3,6 @@
 #include "JuceHeader.h"
 #include "AudioDeviceSettings.h"
 
-// ============================================================
-// DPI Scaling utility
-// ============================================================
-inline float getDPIScaleFactor();  // Forward declaration, defined in .cpp
-inline float getFontScaleFactor();  // Combined DPI + language font scaling, defined in .cpp
-
 //==============================================================================
 enum class NodeType { Input, Output, Plugin };
 
@@ -24,17 +18,17 @@ struct PluginNode
     /** Corresponding AudioProcessorGraph NodeID (0 = not in graph yet). */
     AudioProcessorGraph::NodeID graphNodeId { 0 };
 
-    // Base sizes (will be scaled by DPI factor)
+    // Base sizes
     static constexpr int kW      = 140;
     static constexpr int kH      = 56;
     static constexpr int kSideH  = 40;
     static constexpr int kPortR  = 7;
     
     // Methods to get scaled sizes
-    static int getWidth()    { return static_cast<int>(kW * getDPIScaleFactor()); }
-    static int getHeight()   { return static_cast<int>(kH * getDPIScaleFactor()); }
-    static int getSideHeight() { return static_cast<int>(kSideH * getDPIScaleFactor()); }
-    static int getPortRadius() { return static_cast<int>(kPortR * getDPIScaleFactor()); }
+    static int getWidth()    { return kW; }
+    static int getHeight()   { return kH; }
+    static int getSideHeight() { return kSideH; }
+    static int getPortRadius() { return kPortR; }
 
     bool hasInputPort()  const { return type != NodeType::Input;  }
     bool hasOutputPort() const { return type != NodeType::Output; }
@@ -58,15 +52,15 @@ struct NodeWire { int fromNode { -1 }; int toNode { -1 }; };
 class NodeGraphCanvas : public Component
 {
 public:
-    // Base sizes (will be scaled by DPI factor)
+    // Base sizes
     static constexpr int kZoneW = 170;
     static constexpr int kHdrH  = 34;
     
     std::unique_ptr<FileLogger> m_flogger;
     
     // Methods to get scaled sizes
-    static int getZoneWidth()  { return static_cast<int>(kZoneW * getDPIScaleFactor()); }
-    static int getHeaderHeight() { return static_cast<int>(kHdrH * getDPIScaleFactor()); }
+    static int getZoneWidth()  { return kZoneW; }
+    static int getHeaderHeight() { return kHdrH; }
 
     static constexpr uint32 kInputNodeUID  = 1000000;
     static constexpr uint32 kOutputNodeUID = 1000001;
