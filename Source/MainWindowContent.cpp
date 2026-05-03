@@ -60,8 +60,6 @@ NodeGraphCanvas::NodeGraphCanvas(AudioDeviceManager& dm,
                                  AudioProcessorGraph& g)
     : deviceManager(dm), knownPlugins(kpl), formatManager(fmt), graph(g)
 {
-    m_flogger = std::unique_ptr<FileLogger>(FileLogger::createDefaultAppLogger("LightHost", "mylog.txt", "Welcome to plugin"));
-
     setOpaque(true);
     setWantsKeyboardFocus(true);  // Enable keyboard focus for Delete key handling
 }

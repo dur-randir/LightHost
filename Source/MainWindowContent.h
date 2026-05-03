@@ -46,8 +46,6 @@ struct NodeWire { int fromNode { -1 }; int toNode { -1 }; };
 class NodeGraphCanvas : public Component
 {
 public:
-    std::unique_ptr<FileLogger> m_flogger;
-    
     // Methods to get scaled sizes
     static int getZoneWidth()  { return 170; }
     static int getHeaderHeight() { return 35; }
