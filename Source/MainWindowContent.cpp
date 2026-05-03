@@ -149,8 +149,6 @@ void NodeGraphCanvas::addNode(const String& name, NodeType type)
 // AudioProcessorGraph helpers
 // ============================================================
 
-#define DBG(text) JUCE_BLOCK_WITH_FORCED_SEMICOLON (juce::String tempDbgBuf; tempDbgBuf << text; if (m_flogger) m_flogger->logMessage(tempDbgBuf);)
-
 void NodeGraphCanvas::addGraphConnection(const PluginNode& from, const PluginNode& to)
 {
     // Verify that nodes exist in the graph
